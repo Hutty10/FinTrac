@@ -62,6 +62,11 @@ class CacheManager:
                 f"{settings.REDIS_PORT}/db{settings.REDIS_DB}"
             ) from e
 
+    async def ping(self) -> bool:
+        assert self.client is not None
+        await self.client.ping()
+        return True
+
     async def close(self) -> None:
         """Close Redis connection. Should be called in FastAPI shutdown event."""
         if self.client:

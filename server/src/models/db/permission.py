@@ -1,12 +1,14 @@
-from datetime import datetime
+# from __future__ import annotations
+
+from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, List, Literal
+from typing import List, Literal
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import DateTime, Field, Relationship, SQLModel, func
 
-if TYPE_CHECKING:
-    from .models import User
+# if TYPE_CHECKING:
+#     from .user import User
 
 
 class PermissionAction(str, Enum):
@@ -45,8 +47,17 @@ class Permission(SQLModel, table=True):
     description: str | None = None
     action: PermissionAction
     resource: ResourceType
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        sa_type=DateTime(timezone=True),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        sa_type=DateTime(timezone=True),
+        sa_column_kwargs={"onupdate": func.now()},
+    )
 
     role_permissions: List["RolePermission"] = Relationship(back_populates="permission")
 
@@ -60,13 +71,22 @@ class Role(SQLModel, table=True):
     name: str = Field(index=True, unique=True)
     description: str | None = None
     is_system: bool = Field(default=False, description="System roles cannot be deleted")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        sa_type=DateTime(timezone=True),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        sa_type=DateTime(timezone=True),
+        sa_column_kwargs={"onupdate": func.now()},
+    )
 
     role_permissions: List["RolePermission"] = Relationship(
         back_populates="role", cascade_delete=True
     )
-    users: List["User"] = Relationship(back_populates="role")
+    users: List["User"] = Relationship(back_populates="role")  # type: ignore # noqa: F821
 
 
 class RolePermission(SQLModel, table=True):
@@ -80,7 +100,11 @@ class RolePermission(SQLModel, table=True):
     scope: str | None = Field(
         default=None, description="Optional scope like tenant_id or resource_id"
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        sa_type=DateTime(timezone=True),
+    )
 
     role: Role = Relationship(back_populates="role_permissions")
     permission: Permission = Relationship(back_populates="role_permissions")

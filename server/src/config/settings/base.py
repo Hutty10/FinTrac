@@ -87,6 +87,20 @@ class BackendBaseSettings(BaseSettings):  # type: ignore[misc]
     HASHING_SALT: str
     JWT_ALGORITHM: str
 
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
+    MAIL_FROM: str
+    MAIL_PORT: int
+    MAIL_SERVER: str
+    MAIL_FROM_NAME: str
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = True
+    USE_CREDENTIALS: bool = True
+    VALIDATE_CERTS: bool = True
+
+    OTP_LENGTH: int = 6
+    OTP_EXPIRY_MINUTES: int = 15
+
     model_config = {
         "validate_assignment": True,
         "env_file": f"{str(ROOT_DIR)}/.env",
@@ -101,6 +115,19 @@ class BackendBaseSettings(BaseSettings):  # type: ignore[misc]
         """
         return "{schema}://{username}:{password}@{host}:{port}/{database}".format(
             schema=self.DB_POSTGRES_SCHEMA,
+            username=self.DB_POSTGRES_USERNAME,
+            password=self.DB_POSTGRES_PASSWORD,
+            host=self.DB_POSTGRES_HOST,
+            port=self.DB_POSTGRES_PORT,
+            database=self.DB_POSTGRES_NAME,
+        )
+
+    @property
+    def SYNC_DATABASE_URI(self) -> str:
+        """
+        Set the synchronous database URI for SQLAlchemy Engine.
+        """
+        return "postgresql://{username}:{password}@{host}:{port}/{database}".format(
             username=self.DB_POSTGRES_USERNAME,
             password=self.DB_POSTGRES_PASSWORD,
             host=self.DB_POSTGRES_HOST,

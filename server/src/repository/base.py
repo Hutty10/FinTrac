@@ -1,88 +1,94 @@
-from typing import Generic, List, TypeVar
+import logging
+from typing import Generic, TypeVar
 from uuid import UUID
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import SQLModel, func, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-T = TypeVar("T")
+T = TypeVar("T", bound=SQLModel)
+
+logger = logging.getLogger(__name__)
 
 
 class BaseRepository(Generic[T]):
     """Generic repository base class for common CRUD operations"""
 
-    def __init__(self, session: AsyncSession, model: type[T]):
-        self.session = session
+    def __init__(self, model: type[T]):
         self.model = model
 
-    async def create(self, obj_in: dict | T) -> T:
+    async def create(self, session: AsyncSession, obj_in: dict | T) -> T:
         """Create a new record"""
         try:
             if isinstance(obj_in, dict):
                 db_obj = self.model(**obj_in)
             else:
                 db_obj = obj_in
-
-            self.session.add(db_obj)
-            await self.session.commit()
-            await self.session.refresh(db_obj)
+            session.add(db_obj)
+            await session.flush()
+            await session.commit()
+            await session.refresh(db_obj)  # ✅ Add this line
             return db_obj
         except SQLAlchemyError as e:
-            await self.session.rollback()
+            await session.rollback()
+            logger.error(f"Error creating {self.model.__name__}: {e}")
             raise Exception(f"Error creating record: {str(e)}")
 
-    async def get_by_id(self, obj_id: int | UUID) -> T | None:
+    async def get_by_id(self, session: AsyncSession, obj_id: int | UUID) -> T | None:
         """Get a record by ID"""
-        return await self.session.get(self.model, obj_id)
+        return await session.get(self.model, obj_id)
 
     async def get_all(
-        self, skip: int | None = None, limit: int | None = None
-    ) -> List[T]:
+        self, session: AsyncSession, skip: int | None = None, limit: int | None = None
+    ) -> list[T]:
         """Get all records with pagination"""
         statement = select(self.model)
         if skip is not None and limit is not None:
             statement = statement.offset(skip).limit(limit)
-        result = await self.session.execute(statement)
+        result = await session.execute(statement)
         return list(result.scalars().all())
 
-    async def update(self, obj_id: int | UUID, obj_in: dict) -> T | None:
+    async def update(
+        self, session: AsyncSession, obj_id: int | UUID, obj_in: dict
+    ) -> T | None:
         """Update a record by ID"""
         try:
-            db_obj = await self.session.get(self.model, obj_id)
+            db_obj = await session.get(self.model, obj_id)
             if not db_obj:
                 return None
 
             for key, value in obj_in.items():
                 setattr(db_obj, key, value)
 
-            self.session.add(db_obj)
-            await self.session.commit()
-            await self.session.refresh(db_obj)
+            # session.add(db_obj)
+            await session.flush()
+            await session.commit()
+            # await session.refresh(db_obj)
             return db_obj
         except SQLAlchemyError as e:
-            await self.session.rollback()
+            await session.rollback()
             raise Exception(f"Error updating record: {str(e)}")
 
-    async def delete(self, obj_id: int | UUID) -> bool:
+    async def delete(self, session: AsyncSession, obj_id: int | UUID) -> bool:
         """Delete a record by ID"""
         try:
-            db_obj = await self.session.get(self.model, obj_id)
+            db_obj = await session.get(self.model, obj_id)
             if not db_obj:
                 return False
 
-            await self.session.delete(db_obj)
-            await self.session.commit()
+            await session.delete(db_obj)
+            await session.commit()
             return True
         except SQLAlchemyError as e:
-            await self.session.rollback()
+            await session.rollback()
             raise Exception(f"Error deleting record: {str(e)}")
 
-    async def exists(self, obj_id: int | UUID) -> bool:
+    async def exists(self, session: AsyncSession, obj_id: int | UUID) -> bool:
         """Check if a record exists"""
-        return await self.session.get(self.model, obj_id) is not None
+        return await session.get(self.model, obj_id) is not None
 
-    async def count(self) -> int:
+    async def count(self, session: AsyncSession) -> int:
         """Count total records"""
-        statement = select(self.model)
-        result = await self.session.execute(statement)
-        return len(result.all())
+        statement = select(func(self.model))
+        result = await session.execute(statement)
+        return result.scalar_one() or 0

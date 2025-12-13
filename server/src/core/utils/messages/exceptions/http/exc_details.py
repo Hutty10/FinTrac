@@ -12,8 +12,8 @@ def http_400_signup_credentials_details() -> str:
     return "Signup failed! Recheck all your credentials!"
 
 
-def http_400_sigin_credentials_details() -> str:
-    return "Signin failed! Recheck all your credentials!"
+def http_400_signin_credentials_details() -> str:
+    return "Login failed! Recheck all your credentials!"
 
 
 def http_401_unauthorized_details() -> str:

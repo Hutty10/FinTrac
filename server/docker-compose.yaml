@@ -1,6 +1,8 @@
 services:
   api:
-    build: .
+    build: 
+      context: .
+      dockerfile: docker/app.Dockerfile
     container_name: fintrac_server
     restart: always
     env_file: .env
