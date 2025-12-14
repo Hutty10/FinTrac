@@ -13,10 +13,13 @@ class RecurringTransaction(SQLModel, table=True):
     __tablename__: str = "recurring_transactions"
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     transaction_id: UUID = Field(
-        foreign_key="transactions.id", index=True, nullable=False
+        foreign_key="transactions.id", index=True, nullable=False, unique=True
     )
     interval: str = Field(nullable=False, max_length=50)
-    next_occurrence: datetime = Field(nullable=False)
+    next_occurrence: datetime = Field(
+        nullable=False,
+        sa_type=DateTime(timezone=True),
+    )
     is_active: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

@@ -13,3 +13,4 @@ class BaseService(Generic[T, R]):
 
     def __init__(self, repository: R):
         self.repository: R = repository
+        

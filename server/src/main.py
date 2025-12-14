@@ -8,8 +8,8 @@ from src.core.middleware.handle_middleware import handle_middleware
 from src.core.utils.exceptions.handler import handle_exceptions
 
 app = FastAPI(lifespan=lifespan_manager, **settings.set_backend_app_attributes)
-handle_exceptions(app)
 handle_middleware(app)
+handle_exceptions(app)
 
 app.include_router(health_router)
 app.include_router(v1_router)

@@ -92,3 +92,16 @@ class BaseRepository(Generic[T]):
         statement = select(func(self.model))
         result = await session.execute(statement)
         return result.scalar_one() or 0
+    
+    async def save(self, session: AsyncSession, db_obj: T) -> T:
+        """Save changes to an existing record"""
+        try:
+            session.add(db_obj)
+            await session.flush()
+            await session.commit()
+            await session.refresh(db_obj)
+            return db_obj
+        except SQLAlchemyError as e:
+            await session.rollback()
+            logger.error(f"Error saving {self.model.__name__}: {e}")
+            raise Exception(f"Error saving record: {str(e)}")

@@ -15,7 +15,11 @@ class Streak(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="users.id", index=True, nullable=False)
     current_streak: int = Field(default=0, nullable=False)
     longest_streak: int = Field(default=0, nullable=False)
-    last_active_date: datetime | None = Field(default=None, nullable=True)
+    last_active_date: datetime | None = Field(
+        default=None,
+        nullable=True,
+        sa_type=DateTime(timezone=True),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         nullable=False,

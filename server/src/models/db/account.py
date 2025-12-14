@@ -43,5 +43,11 @@ class Account(SQLModel, table=True):
     user: "User" = Relationship(back_populates="accounts")  # type: ignore # noqa: F821
     currency: "Currency" = Relationship(back_populates="accounts")  # type: ignore # noqa: F821
     transactions: List["Transaction"] = Relationship(  # type: ignore # noqa: F821
-        back_populates="account", cascade_delete=True
+        back_populates="account",
+        cascade_delete=True,
+        sa_relationship_kwargs={"foreign_keys": "[Transaction.account_id]"},
+    )
+    outgoing_transfers: List["Transaction"] = Relationship(  # type: ignore # noqa: F821
+        back_populates="to_account",
+        sa_relationship_kwargs={"foreign_keys": "[Transaction.to_account_id]"},
     )
