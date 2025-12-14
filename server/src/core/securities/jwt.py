@@ -107,14 +107,6 @@ class JWTManager:
             HTTPException: If token is invalid or expired
         """
         try:
-            if not token.startswith("Bearer ") and token_type == "access":
-                raise BaseAppException(
-                    message="Invalid token format",
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    errors={"token": "Token must start with 'Bearer '"},
-                )
-            if token_type == "access":
-                token = token.split("Bearer ")[1]
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
 
             # Verify token type

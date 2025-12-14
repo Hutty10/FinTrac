@@ -1,13 +1,14 @@
 import json
 import logging
 import time
-from typing import Callable
+from typing import Callable, override
 from uuid import UUID
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from src.core.securities.jwt import jwt_manager
 from src.models.db.audit_log import AuditLog
 from src.repository.database import async_db
 
@@ -20,12 +21,14 @@ class HTTPAuditLogMiddleware(BaseHTTPMiddleware):
 
     Features:
     - Async-safe audit logging with database persistence
-    - User identification from request context
+    - User identification from request Authorization header (JWT token)
+    - Request metadata capture (method, path, query string, client IP)
     - Request/response body capture (with size limits)
     - Sensitive data masking
     - Performance monitoring with request duration
     - Graceful error handling that doesn't break the request
     - Configurable excluded paths
+    - Non-blocking audit logging with separate database session
     """
 
     # Paths that should not be audited (health checks, etc.)
@@ -45,13 +48,15 @@ class HTTPAuditLogMiddleware(BaseHTTPMiddleware):
         "api_key",
         "secret",
         "credit_card",
-        "ssn",
+        "bvn",
+        "nin",
     }
 
     def __init__(self, app: ASGIApp):
         super().__init__(app)
         self.app = app
 
+    @override
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """
         Main middleware dispatch method that logs all HTTP activity.
@@ -98,18 +103,22 @@ class HTTPAuditLogMiddleware(BaseHTTPMiddleware):
 
         finally:
             # Always log the audit trail, even if there was an error
+            # Use a separate task to avoid blocking the response
             duration = time.time() - start_time
-            await self._log_audit(
-                user_id=user_id,
-                method=method,
-                path=path,
-                query_string=query_string,
-                status_code=status_code,
-                client_host=client_host,
-                request_body=request_body,
-                response_body=response_body,
-                duration_ms=int(duration * 1000),
-            )
+            try:
+                await self._log_audit(
+                    user_id=user_id,
+                    method=method,
+                    path=path,
+                    query_string=query_string,
+                    status_code=status_code,
+                    client_host=client_host,
+                    request_body=request_body,
+                    response_body=response_body,
+                    duration_ms=int(duration * 1000),
+                )
+            except Exception as exc:
+                logger.error(f"Failed to schedule audit logging: {exc}", exc_info=True)
 
     def _should_skip_audit(self, request: Request) -> bool:
         """Check if this request should be excluded from audit logging."""
@@ -121,24 +130,18 @@ class HTTPAuditLogMiddleware(BaseHTTPMiddleware):
 
     async def _extract_user_id(self, request: Request) -> UUID | None:
         """
-        Extract user ID from request context.
-
-        Modify this based on your authentication implementation:
-        - JWT token decoding
-        - Session data
-        - Request state
+        Extract user ID from request Authorization header.
         """
         try:
-            # Example: Extract from request state (set by auth middleware)
-            if hasattr(request.state, "user_id"):
-                user_id = request.state.user_id
-                if isinstance(user_id, str):
-                    return UUID(user_id)
-                return user_id
-
-            # Example: Extract from JWT token if using fastapi-jwt-extended
-            # from fastapi_jwt_extended import get_jwt_identity
-            # user_id = get_jwt_identity()
+            auth_header = request.headers.get("Authorization")
+            if auth_header:
+                token = auth_header.split(" ")[1]
+                payload = await jwt_manager.verify_token(
+                    token=token, token_type="access"
+                )
+                user_id_str = payload.get("user_id")
+                if user_id_str:
+                    return UUID(user_id_str)
 
             return None
         except Exception as exc:
@@ -229,12 +232,14 @@ class HTTPAuditLogMiddleware(BaseHTTPMiddleware):
         duration_ms: int,
     ) -> None:
         """
-        Create an audit log entry in the database.
-        Runs in background and doesn't block the response.
+        Create an audit log entry in the database using a separate session.
+        This ensures the audit log is committed independently from the request transaction.
         """
         if user_id is None:
             logger.debug(f"Skipping audit for unauthenticated {method} {path}")
             return
+
+        print("Logging audit for:", method, path, "by user:", user_id)
 
         try:
             # Prepare audit details
@@ -263,10 +268,12 @@ class HTTPAuditLogMiddleware(BaseHTTPMiddleware):
                 details=json.dumps(details),
             )
 
-            # Use async_db.session_maker directly
-            async with async_db.session_maker() as session:
-                session.add(audit_log)
-                await session.commit()
+            # Use a NEW session for audit logging to avoid transaction conflicts
+            # This is separate from the request's session
+            async with async_db.session_maker() as audit_session:
+                audit_session.add(audit_log)
+                await audit_session.commit()
+                logger.debug(f"Audit logged: {action} {entity} by {user_id}")
 
         except Exception as exc:
             logger.error(
