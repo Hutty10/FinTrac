@@ -23,10 +23,12 @@ class Account(SQLModel, table=True):
     __tablename__: str = "accounts"
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     user_id: UUID = Field(foreign_key="users.id", index=True, nullable=False)
-    name: str = Field(index=True, nullable=False, max_length=20)
+    name: str = Field(index=True, nullable=False, max_length=50, unique=True)
     account_type: str = Field(nullable=False, max_length=50)
     balance: float = Field(default=0.0, nullable=False)
-    currency_id: UUID = Field(foreign_key="currencies.id", index=True, nullable=False)
+    currency_id: UUID = Field(
+        foreign_key="currencies.id", index=True, nullable=False, unique=False
+    )
     is_active: bool = Field(default=True, nullable=False)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -41,11 +43,16 @@ class Account(SQLModel, table=True):
     )
 
     user: "User" = Relationship(back_populates="accounts")  # type: ignore # noqa: F821
-    currency: "Currency" = Relationship(back_populates="accounts")  # type: ignore # noqa: F821
+    currency: "Currency" = Relationship(  # type: ignore # noqa: F821
+        back_populates="accounts", sa_relationship_kwargs={"lazy": "selectin"}
+    )
     transactions: List["Transaction"] = Relationship(  # type: ignore # noqa: F821
         back_populates="account",
         cascade_delete=True,
-        sa_relationship_kwargs={"foreign_keys": "[Transaction.account_id]"},
+        sa_relationship_kwargs={
+            "foreign_keys": "[Transaction.account_id]",
+            "lazy": "selectin",
+        },
     )
     outgoing_transfers: List["Transaction"] = Relationship(  # type: ignore # noqa: F821
         back_populates="to_account",

@@ -11,7 +11,6 @@ from pydantic import SecretStr
 from src.config.manager import settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-print(f"BASE_DIR: {BASE_DIR}")
 
 config = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USERNAME,
