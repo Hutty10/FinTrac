@@ -50,7 +50,7 @@ class TransactionRepository(BaseRepository[Transaction]):
         return transactions, meta
 
     async def get_by_user_id(
-        self, session: AsyncSession, user_id: UUID, page: int = 1, page_size: int = 20
+        self, session: AsyncSession, user_id: UUID, page: int, page_size: int
     ) -> Tuple[list[Transaction], dict[str, Any]]:
         """Get paginated transactions for a specific user"""
 

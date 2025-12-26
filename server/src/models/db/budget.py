@@ -26,8 +26,16 @@ class Budget(SQLModel, table=True):
     name: str = Field(index=True, nullable=False, max_length=100)
     amount: float = Field(nullable=False)
     frequency: BudgetFrequency = Field(nullable=False, max_length=20)
-    start_date: datetime = Field(..., nullable=False)
-    end_date: datetime = Field(..., nullable=False)
+    start_date: datetime = Field(
+        ...,
+        nullable=False,
+        sa_type=DateTime(timezone=True),
+    )
+    end_date: datetime = Field(
+        ...,
+        nullable=False,
+        sa_type=DateTime(timezone=True),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         nullable=False,
