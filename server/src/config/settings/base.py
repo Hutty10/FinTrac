@@ -101,6 +101,8 @@ class BackendBaseSettings(BaseSettings):  # type: ignore[misc]
     OTP_LENGTH: int = 6
     OTP_EXPIRY_MINUTES: int = 15
 
+    ACCOUNT_DELETION_DAYS: int = 30
+
     model_config = {
         "validate_assignment": True,
         "env_file": f"{str(ROOT_DIR)}/.env",

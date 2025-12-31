@@ -42,6 +42,7 @@ class User(SQLModel, table=True):
     role_id: UUID = Field(foreign_key="roles.id", index=True)
     is_active: bool = Field(default=True, nullable=False)
     is_verified: bool = Field(default=False, nullable=False)
+    is_deleted: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         nullable=False,
@@ -54,6 +55,11 @@ class User(SQLModel, table=True):
         sa_column_kwargs={"onupdate": func.now()},
     )
     last_login: datetime | None = Field(
+        default=None,
+        nullable=True,
+        sa_type=DateTime(timezone=True),
+    )
+    deleted_at: datetime | None = Field(
         default=None,
         nullable=True,
         sa_type=DateTime(timezone=True),

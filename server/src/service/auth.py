@@ -12,6 +12,7 @@ from src.core.tasks.email_tasks import (
 )
 from src.core.utils.exceptions.base import BaseAppException
 from src.core.utils.messages.exceptions.http import exc_details
+from src.core.utils.user_utils import check_deleted_user
 from src.models.db.account import Account, AccountType
 from src.models.db.otp import OTPType
 from src.models.db.streak import Streak
@@ -213,6 +214,8 @@ class AuthService(BaseService[User, UserRepository]):
             #     type=OTPType.EMAIL_VERIFICATION,
             #     expires_at=otp_expires_at,
             # )
+            if user.is_deleted:
+                check_deleted_user(user)
             otp = await self.otp_repo.create_otp(
                 session,
                 user.id,
@@ -243,6 +246,9 @@ class AuthService(BaseService[User, UserRepository]):
                 message="Invalid email/username or password",
                 status_code=401,
             )
+        if user.is_deleted:
+            check_deleted_user(user)
+
         is_password_valid = user.verify_password(data.password)
         if not is_password_valid:
             raise BaseAppException(
@@ -285,6 +291,8 @@ class AuthService(BaseService[User, UserRepository]):
             #     type=OTPType.PASSWORD_RESET,
             #     expires_at=otp_expires_at,
             # )
+            if user.is_deleted:
+                check_deleted_user(user)
             otp = await self.otp_repo.create_otp(
                 session,
                 user.id,
@@ -342,6 +350,8 @@ class AuthService(BaseService[User, UserRepository]):
                 message="Wrong email address or username provided",
                 status_code=400,
             )
+        if user.is_deleted:
+            check_deleted_user(user)
         otp = await self.otp_repo.get_by_id(session, UUID(data.token))
         if not otp or otp.user_id != user.id or otp.type != OTPType.PASSWORD_RESET:
             raise BaseAppException(

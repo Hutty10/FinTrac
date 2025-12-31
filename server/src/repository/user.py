@@ -47,5 +47,4 @@ class UserRepository(BaseRepository[User]):
         await session.refresh(user)
 
 
-
 user_repository = UserRepository()

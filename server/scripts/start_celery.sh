@@ -12,7 +12,7 @@ function start_worker() {
 
 function start_beat() {
     echo "Starting Celery beat..."
-    celery -A $APP_MODULE beat --loglevel=$LOG_LEVEL --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    celery -A $APP_MODULE beat --loglevel=$LOG_LEVEL 
 }
 
 function start_all() {

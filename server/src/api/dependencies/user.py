@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.api.dependencies.session import get_session
 from src.core.securities.jwt import jwt_manager
 from src.core.utils.exceptions.base import BaseAppException
+from src.core.utils.user_utils import check_deleted_user
 from src.models.db.user import User
 from src.repository.user import user_repository
 
@@ -52,6 +53,8 @@ async def get_current_active_user(
             message="User not found",
             status_code=401,
         )
+    if user.is_deleted:
+        check_deleted_user(user)
     if not user.is_active:
         raise BaseAppException(message="User not active", status_code=403)
     return user
