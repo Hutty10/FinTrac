@@ -25,7 +25,11 @@ class Goal(SQLModel, table=True):
     name: str = Field(index=True, nullable=False, max_length=100)
     target_amount: float = Field(nullable=False)
     current_amount: float = Field(default=0.0, nullable=False)
-    due_date: datetime | None = Field(default=None, nullable=True)
+    due_date: datetime | None = Field(
+        default=None,
+        nullable=True,
+        sa_type=DateTime(timezone=True),
+    )
     status: GoalStatus = Field(default=GoalStatus.ACTIVE, nullable=False, max_length=20)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -40,4 +44,6 @@ class Goal(SQLModel, table=True):
     )
 
     user: "User" = Relationship(back_populates="goals")  # type: ignore # noqa: F821
-    currency: "Currency" = Relationship(back_populates="goals")  # type: ignore # noqa: F821
+    currency: "Currency" = Relationship(  # type: ignore # noqa: F821
+        back_populates="goals", sa_relationship_kwargs={"lazy": "selectin"}
+    )

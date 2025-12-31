@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from src.models.db.budget import Budget
 from src.models.schemas.budget import BudgetCreate, BudgetRead, BudgetUpdate
 from src.models.schemas.response import ResponseModel
@@ -22,7 +24,11 @@ class BudgetService(BaseService[Budget, BudgetRepository]):
         )
 
     async def get_budgets_by_user(
-        self, session, user_id: UUID, page: int | None, page_size: int | None
+        self,
+        session: AsyncSession,
+        user_id: UUID,
+        page: int | None,
+        page_size: int | None,
     ) -> ResponseModel[list[BudgetRead]]:
         budgets, metadata = await self.repository.get_by_user(
             session, user_id, page, page_size
@@ -35,7 +41,7 @@ class BudgetService(BaseService[Budget, BudgetRepository]):
         )
 
     async def get_budget_by_id(
-        self, session, budget_id: UUID, user_id: UUID
+        self, session: AsyncSession, budget_id: UUID, user_id: UUID
     ) -> ResponseModel[BudgetRead]:
         budget = await self.repository.get_by_id(session, budget_id)
         if not budget:
@@ -48,7 +54,11 @@ class BudgetService(BaseService[Budget, BudgetRepository]):
         )
 
     async def update_budget(
-        self, session, budget_id: UUID, user_id: UUID, budget_update: BudgetUpdate
+        self,
+        session: AsyncSession,
+        budget_id: UUID,
+        user_id: UUID,
+        budget_update: BudgetUpdate,
     ) -> ResponseModel[BudgetRead]:
         budget = await self.repository.get_by_id(session, budget_id)
         if not budget:
@@ -65,7 +75,7 @@ class BudgetService(BaseService[Budget, BudgetRepository]):
         )
 
     async def delete_budget(
-        self, session, budget_id: UUID, user_id: UUID
+        self, session: AsyncSession, budget_id: UUID, user_id: UUID
     ) -> ResponseModel[None]:
         budget = await self.repository.get_by_id(session, budget_id)
         if not budget:
