@@ -85,6 +85,15 @@ class User(SQLModel, table=True):
         back_populates="user", cascade_delete=True
     )
     otps: List["OTP"] = Relationship(back_populates="user", cascade_delete=True)  # type: ignore # noqa: F821
+    auth_sessions: List["AuthSession"] = Relationship(  # type: ignore # noqa: F821
+        back_populates="user", cascade_delete=True
+    )
+    security_events: List["SecurityEvent"] = Relationship(  # type: ignore # noqa: F821
+        back_populates="user", cascade_delete=True
+    )
+    user_devices: List["UserDevice"] = Relationship(  # type: ignore # noqa: F821
+        back_populates="user", cascade_delete=True
+    )
 
     def set_password(self, password: str) -> None:
         self.hashed_password = password_hash.hash(password)

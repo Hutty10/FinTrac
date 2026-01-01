@@ -102,6 +102,10 @@ class BackendBaseSettings(BaseSettings):  # type: ignore[misc]
     OTP_EXPIRY_MINUTES: int = 15
 
     ACCOUNT_DELETION_DAYS: int = 30
+    MAX_SESSIONS_PER_USER:int = 5
+
+    IPSTACK_API_KEY: str
+
 
     model_config = {
         "validate_assignment": True,

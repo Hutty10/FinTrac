@@ -8,7 +8,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from src.core.securities.jwt import jwt_manager
+from src.core.utils.user_utils import extract_user_id
 from src.models.db.audit_log import AuditLog
 from src.repository.database import async_db
 
@@ -72,7 +72,7 @@ class HTTPAuditLogMiddleware(BaseHTTPMiddleware):
         client_host = request.client.host if request.client else None
 
         # Get user ID from request context (JWT token, session, etc.)
-        user_id = await self._extract_user_id(request)
+        user_id = await extract_user_id(request)
 
         # Capture request body if needed
         request_body = None
@@ -127,26 +127,6 @@ class HTTPAuditLogMiddleware(BaseHTTPMiddleware):
             or request.url.path in self.EXCLUDED_PATHS
             or any(request.url.path.startswith(path) for path in self.EXCLUDED_PATHS)
         )
-
-    async def _extract_user_id(self, request: Request) -> UUID | None:
-        """
-        Extract user ID from request Authorization header.
-        """
-        try:
-            auth_header = request.headers.get("Authorization")
-            if auth_header:
-                token = auth_header.split(" ")[1]
-                payload = await jwt_manager.verify_token(
-                    token=token, token_type="access"
-                )
-                user_id_str = payload.get("user_id")
-                if user_id_str:
-                    return UUID(user_id_str)
-
-            return None
-        except Exception as exc:
-            logger.warning(f"Failed to extract user_id: {exc}")
-            return None
 
     async def _capture_body(self, request: Request) -> str | None:
         """Capture and mask sensitive request body data."""

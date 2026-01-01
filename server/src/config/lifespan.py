@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
+from src.core.rate_limiter import rate_limiter
 from src.core.cache_manager import cache_manager
 from src.core.utils.exceptions.cache import RedisConnectionError
 
@@ -12,6 +13,7 @@ async def lifespan(app):
     print("Starting up...")
     try:
         await cache_manager.initialize()
+        await rate_limiter.initialize()
         logger.info("Cache manager initialized")
     except RedisConnectionError:
         logger.error("Unable to load redis")

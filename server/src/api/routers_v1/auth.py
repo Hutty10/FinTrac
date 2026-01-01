@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.api.dependencies.rate_limit import RateLimit, RateLimitIdentifier
 from src.api.dependencies.session import get_session
 from src.models.schemas.auth import (
     ForgotPasswordSchema,
+    LoginResponse,
     LoginSchema,
     LogoutSchema,
     RefreshTokenSchema,
@@ -30,7 +32,19 @@ async def register_user(
     return await auth_service.register_user(session, data)
 
 
-@router.post("/verify-email", response_model=ResponseModel)
+@router.post(
+    "/verify-email",
+    response_model=ResponseModel,
+    dependencies=[
+        Depends(
+            RateLimit(
+                capacity=5,
+                refill_rate=1 / 60,
+                identifier_type=RateLimitIdentifier.EMAIL,
+            )
+        )
+    ],
+)
 async def verify_email(
     data: VerifyEmailSchema,
     session: AsyncSession = Depends(get_session),
@@ -46,11 +60,31 @@ async def resend_verification_email(
     return await auth_service.resend_verification_email(session, data)
 
 
-@router.post("/login", response_model=ResponseModel[TokenSchema])
+@router.post(
+    "/login",
+    response_model=ResponseModel[LoginResponse],
+    dependencies=[
+        Depends(RateLimit(capacity=10, refill_rate=1 / 60)),
+        Depends(
+            RateLimit(
+                capacity=5,
+                refill_rate=1 / 900,
+                identifier_type=RateLimitIdentifier.EMAIL,
+            )
+        ),
+        Depends(
+            RateLimit(
+                capacity=5,
+                refill_rate=1 / 900,
+                identifier_type=RateLimitIdentifier.USERNAME,
+            )
+        ),
+    ],
+)
 async def login(
     data: LoginSchema,
     session: AsyncSession = Depends(get_session),
-) -> ResponseModel[TokenSchema]:
+) -> ResponseModel[LoginResponse]:
     return await auth_service.login_user(session, data)
 
 
@@ -62,7 +96,19 @@ async def refresh_token(
     return await auth_service.refresh_tokens(session, data)
 
 
-@router.post("/forgot-password", response_model=ResponseModel)
+@router.post(
+    "/forgot-password",
+    response_model=ResponseModel,
+    dependencies=[
+        Depends(
+            RateLimit(
+                capacity=5,
+                refill_rate=1 / 20,
+                identifier_type=RateLimitIdentifier.EMAIL,
+            )
+        )
+    ],
+)
 async def forgot_password(
     data: ForgotPasswordSchema,
     session: AsyncSession = Depends(get_session),

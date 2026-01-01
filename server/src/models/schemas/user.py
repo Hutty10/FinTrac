@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import EmailStr, Field, field_validator
 
+from src.models.schemas.auth_device import LoginContextSchema, LoginDeviceSchema
 from src.models.schemas.base import BaseSchemaModel
 
 
@@ -11,6 +12,9 @@ class ChangePassword(BaseSchemaModel):
 
     old_password: str = Field(..., min_length=8)
     new_password: str = Field(..., min_length=8)
+
+    device: LoginDeviceSchema
+    context: LoginContextSchema | None = None
 
     @field_validator("new_password")
     def validate_new_password(cls, value):
@@ -32,6 +36,16 @@ class ChangePassword(BaseSchemaModel):
             "example": {
                 "old_password": "OldPassword123!",
                 "new_password": "NewSecurePassword456!",
+                "device": {
+                    "device_id": "ios-uuid-12345",
+                    "device_name": "John's iPhone",
+                    "device_type": "iOS",
+                    "app_version": "1.0.0",
+                },
+                "context": {
+                    "ip_address": "197.210.12.45",
+                    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+                },
             }
         }
 

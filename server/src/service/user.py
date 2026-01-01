@@ -1,15 +1,22 @@
+from uuid import UUID
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.utils.exceptions.base import BaseAppException
+from src.models.db.security_event import SecurityEvent, SecurityEventTypeEnum
 from src.models.db.user import User
 from src.models.schemas.response import ResponseModel
 from src.models.schemas.user import ChangePassword, UserRead, UserUpdate
+from src.repository.auth_session import AuthSessionRepository
+from src.repository.security_event import SecurityEventRepository
 from src.repository.user import UserRepository
 from src.service.base import BaseService
 
 
 class UserService(BaseService[User, UserRepository]):
     def __init__(self):
+        self.auth_session_repo = AuthSessionRepository()
+        self.security_event_repo = SecurityEventRepository()
         super().__init__(UserRepository())
 
     async def change_password(
@@ -36,4 +43,19 @@ class UserService(BaseService[User, UserRepository]):
     async def get_user(self, user: User) -> ResponseModel[UserRead]:
         return ResponseModel(
             message="User succcessfully retrieved", data=UserRead.model_validate(user)
+        )
+
+    async def revoke_all_for_user(
+        self, session: AsyncSession, user_id: UUID
+    ) -> ResponseModel[None]:
+        """Revoke all active sessions for a user"""
+        await self.auth_session_repo.revoke_all(session, user_id)
+        security_event = SecurityEvent(
+            user_id=user_id,
+            event_type=SecurityEventTypeEnum.LOGOUT_ALL_DEVICE,
+        )
+        await self.security_event_repo.create(session, security_event)
+
+        return ResponseModel(
+            message="Successfully logged out from all sessions", data=None
         )

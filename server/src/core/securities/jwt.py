@@ -237,5 +237,29 @@ class JWTManager:
             "token_type": "bearer",
         }
 
+    async def extract_jti(self, token: str, token_type: str = "refresh") -> str:
+        """Extract the JTI claim from a token without verification."""
+        payload = await self.verify_token(token, token_type=token_type)
+        jti = payload.get("jti")
+        if not jti:
+            raise BaseAppException(
+                message="Invalid token",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                errors={"token": "Token missing jti claim"},
+            )
+        return jti
+    
+    async def extract_exp(self, token: str, token_type: str = "refresh") -> int:
+        """Extract the exp claim from a token without verification."""
+        payload = await self.verify_token(token, token_type=token_type)
+        exp = payload.get("exp")
+        if not exp:
+            raise BaseAppException(
+                message="Invalid token",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                errors={"token": "Token missing exp claim"},
+            )
+        return exp
+
 
 jwt_manager = JWTManager()

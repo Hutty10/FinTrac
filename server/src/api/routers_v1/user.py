@@ -44,3 +44,11 @@ async def get_current_user(
     """Retrieve the current user's information."""
     return await service.get_user(user=current_user)
 
+
+@router.post("/logout-all", response_model=ResponseModel)
+async def logout_all_sessions(
+    user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_session),
+    service: UserService = Depends(),
+) -> ResponseModel:
+    return await service.revoke_all_for_user(session, user.id)
