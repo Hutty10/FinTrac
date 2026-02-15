@@ -23,7 +23,15 @@ dependencies = [
 entrypoint = "src.main:app"
 
 [dependency-groups]
-dev = ["ruff>=0.14.8"]
+dev = [
+    "ruff>=0.14.8",
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-xdist>=3.5.0",
+    "httpx>=0.25.0",
+    "aiosqlite>=0.19.0",
+]
 
 [tool.ruff]
 line-length = 88
